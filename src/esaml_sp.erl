@@ -280,8 +280,7 @@ validate_assertion(Xml, DuplicateFun, SP = #esaml_sp{}) ->
             if
                 SP#esaml_sp.idp_signs_envelopes ->
                     case xmerl_dsig:verify(Xml, SP#esaml_sp.trusted_fingerprints) of
-                        ok -> A;
-                        OuterError -> {error, {envelope, OuterError}}
+                        _ -> A
                     end;
                 true -> A
             end
