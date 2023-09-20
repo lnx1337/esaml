@@ -274,7 +274,6 @@ validate_assertion(Xml, DuplicateFun, SP = #esaml_sp{}) ->
                 _ ->
                     case xmerl_xpath:string("/samlp:Response/saml:Assertion", X, [{namespace, Ns}]) of
                         [A3] -> 
-                            io:format("PASO VERIFY 0 ~p~n", [A3]),
                             io:format("PASO VERIFY 0"),
                             A3;
                         _ -> {error, bad_assertion}
@@ -286,7 +285,6 @@ validate_assertion(Xml, DuplicateFun, SP = #esaml_sp{}) ->
                 SP#esaml_sp.idp_signs_envelopes ->
                     case xmerl_dsig:verify(Xml, SP#esaml_sp.trusted_fingerprints) of
                         ok -> 
-                            io:format("PASO VERIFY 1 ~p~n", [A]),
                             io:format("PASO VERIFY 1"),
                             A;
                         OuterError -> {error, {envelope, OuterError}}
@@ -298,7 +296,6 @@ validate_assertion(Xml, DuplicateFun, SP = #esaml_sp{}) ->
             if SP#esaml_sp.idp_signs_assertions ->
                 case xmerl_dsig:verify(A, SP#esaml_sp.trusted_fingerprints) of
                     ok -> 
-                        io:format("PASO VERIFY 2 ~p~n", [A]),
                         io:format("PASO VERIFY 2"),
                         A;
                     InnerError -> {error, {assertion, InnerError}}
@@ -309,7 +306,6 @@ validate_assertion(Xml, DuplicateFun, SP = #esaml_sp{}) ->
         fun(A) ->
             case esaml:validate_assertion(A, SP#esaml_sp.consume_uri, get_entity_id(SP)) of
                 {ok, AR} -> 
-                        io:format("PASO VERIFY 3 ~p~n", [AR]),
                         io:format("PASO VERIFY 3"),
                     AR;
                 {error, Reason} -> {error, Reason}
@@ -318,7 +314,6 @@ validate_assertion(Xml, DuplicateFun, SP = #esaml_sp{}) ->
         fun(AR) ->
             case DuplicateFun(AR, xmerl_dsig:digest(Xml)) of
                 ok -> 
-                    io:format("PASO VERIFY 4 ~p~n", [AR]),
                     io:format("PASO VERIFY 4"),
                     AR;
                 _ -> {error, duplicate}
