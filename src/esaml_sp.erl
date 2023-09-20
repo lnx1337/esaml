@@ -251,7 +251,9 @@ validate_assertion(Xml, DuplicateFun, SP = #esaml_sp{}) ->
                         ErrorStatus ->
                             ErrorMessage = case xmerl_xpath:string("/samlp:Response/samlp:Status/samlp:StatusMessage/text()", X, [{namespace, Ns}]) of
                                 [] -> undefined;
-                                [A] -> lists:flatten(xmerl_xs:value_of(A));
+                                [A] -> 
+                                    io:format("PASO VERIFY 00"),
+                                    lists:flatten(xmerl_xs:value_of(A));
                                 _ -> malformed
                             end,
                             {error, {saml_error, ErrorStatus, ErrorMessage}}
@@ -271,7 +273,10 @@ validate_assertion(Xml, DuplicateFun, SP = #esaml_sp{}) ->
                     end;
                 _ ->
                     case xmerl_xpath:string("/samlp:Response/saml:Assertion", X, [{namespace, Ns}]) of
-                        [A3] -> A3;
+                        [A3] -> 
+                            io:format("PASO VERIFY 0 ~p~n", [A3]),
+                            io:format("PASO VERIFY 0"),
+                            A3;
                         _ -> {error, bad_assertion}
                     end
             end
@@ -280,7 +285,11 @@ validate_assertion(Xml, DuplicateFun, SP = #esaml_sp{}) ->
             if
                 SP#esaml_sp.idp_signs_envelopes ->
                     case xmerl_dsig:verify(Xml, SP#esaml_sp.trusted_fingerprints) of
-                        _ -> A
+                        ok -> 
+                            io:format("PASO VERIFY 1 ~p~n", [A]),
+                            io:format("PASO VERIFY 1"),
+                            A;
+                        OuterError -> {error, {envelope, OuterError}}
                     end;
                 true -> A
             end
@@ -288,20 +297,30 @@ validate_assertion(Xml, DuplicateFun, SP = #esaml_sp{}) ->
         fun(A) ->
             if SP#esaml_sp.idp_signs_assertions ->
                 case xmerl_dsig:verify(A, SP#esaml_sp.trusted_fingerprints) of
-                    _ -> A
+                    ok -> 
+                        io:format("PASO VERIFY 2 ~p~n", [A]),
+                        io:format("PASO VERIFY 2"),
+                        A;
+                    InnerError -> {error, {assertion, InnerError}}
                 end;
             true -> A
             end
         end,
         fun(A) ->
             case esaml:validate_assertion(A, SP#esaml_sp.consume_uri, get_entity_id(SP)) of
-                {ok, AR} -> AR;
+                {ok, AR} -> 
+                        io:format("PASO VERIFY 3 ~p~n", [AR]),
+                        io:format("PASO VERIFY 3"),
+                    AR;
                 {error, Reason} -> {error, Reason}
             end
         end,
         fun(AR) ->
             case DuplicateFun(AR, xmerl_dsig:digest(Xml)) of
-                ok -> AR;
+                ok -> 
+                    io:format("PASO VERIFY 4 ~p~n", [AR]),
+                    io:format("PASO VERIFY 4"),
+                    AR;
                 _ -> {error, duplicate}
             end
         end
