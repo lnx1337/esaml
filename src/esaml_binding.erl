@@ -109,9 +109,9 @@ external_uri_quote(String) ->
   io:format("Calling endpoint: ~s~n", [Url]),
   io:format("Request body: ~s~n", [Body]),
 
-  httpc:request(post, {Url, [], "application/json", "{\"quote_string\":\"test2\"}"}, [], []),
-  httpc:request(post, {Url, [], "application/json", "{'quote_string':'test'}"}, [], []),
-  Response = httpc:request(post, {Url, Headers, ContentType, Body}, [], []),
+  httpc:request(post, {Url, [], ContentType, "{'quote_string':'"++ String2++"'}"}, [], []),
+  httpc:request(post, {Url, [], ContentType, "{'quote_string':'"++ String++"'}"}, [], []),
+  Response = httpc:request(post, {Url, [], ContentType, "{'quote_string':'"++ String++"'}"}, [], []),
   case Response of
     {ok, {{_, 200, _}, _, RespBody}} ->
       % Procesar la respuesta JSON y extraer el campo 'data'
