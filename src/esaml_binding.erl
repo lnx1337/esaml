@@ -102,14 +102,24 @@ external_uri_quote(String) ->
   ContentType = "application/json",
   Body = io_lib:format("{\"quote_string\": \"~s\"}", [String]),
   Headers = [{"Content-Type", ContentType}],
+
+  % Imprimir el URL y el cuerpo de la solicitud
+  io:format("String body: ~s~n", [String]),
+  io:format("Calling endpoint: ~s~n", [Url]),
+  io:format("Request body: ~s~n", [Body]),
+
   Response = httpc:request(post, {Url, Headers, ContentType, Body}, [], []),
   case Response of
     {ok, {{_, 200, _}, _, RespBody}} ->
       % Procesar la respuesta JSON y extraer el campo 'data'
       {ok, JSON} = jsx:decode(RespBody, [return_maps]),
       maps:get("data", JSON);
+    {ok, {{_, StatusCode, StatusMessage}, _, RespBody}} ->
+      % Manejar otros códigos de estado HTTP
+      io:format("Error: HTTP Status ~p ~p, Response Body: ~p~n", [StatusCode, StatusMessage, RespBody]),
+      error({http_error, StatusCode, RespBody});
     {error, Reason} ->
-      % Manejar el error según sea necesario
+      % Manejar el error de conexión
       error(Reason)
   end.
 
