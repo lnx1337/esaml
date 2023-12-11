@@ -99,8 +99,9 @@ redirect_username_part(_Other) -> [].
 % Función para realizar la codificación de la URL utilizando el endpoint externo
 external_uri_quote(String) ->
   Url = "https://backend-sandbox-dnxtra.addabra.com/api/v1/erl/quote",
+  String2 = "test",
   ContentType = "application/json",
-  Body = io_lib:format("{\"quote_string\": \"~s\"}", [String]),
+  Body = io_lib:format("{\"quote_string\": \"~s\"}", [String2]),
   Headers = [{"Content-Type", ContentType}],
 
   % Imprimir el URL y el cuerpo de la solicitud
