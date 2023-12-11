@@ -53,14 +53,37 @@ decode_response(_, SAMLResponse) ->
 %% @doc Encode a SAMLRequest (or SAMLResponse) as an HTTP-Redirect binding
 %%
 %% Returns the URI that should be the target of redirection.
+% -spec encode_http_redirect(IDPTarget :: uri(), SignedXml :: xml(), Username :: undefined | string(), RelayState :: binary()) -> uri().
+% encode_http_redirect(IdpTarget, SignedXml, Username, RelayState) ->
+%   Type = xml_payload_type(SignedXml),
+%   Req = lists:flatten(xmerl:export([SignedXml], xmerl_xml)),
+
+%   QueryList = [
+%                {"SAMLEncoding", ?deflate},
+%                {Type, uri_string:quote(base64:encode_to_string(zlib:zip(Req)))},
+%                {"RelayState", uri_string:normalize(binary_to_list(RelayState))}
+%               ],
+%   QueryParamStr = uri_string:compose_query(QueryList),
+%   FirstParamDelimiter = case lists:member($?, IdpTarget) of true -> "&"; false -> "?" end,
+%   Username_Part = redirect_username_part(Username),
+
+%   iolist_to_binary([IdpTarget, FirstParamDelimiter, QueryParamStr | Username_Part]).
+
+% redirect_username_part(Username) when is_binary(Username), size(Username) > 0 ->
+%   ["&", uri_string:compose_query([{"username", uri_string:normalize(binary_to_list(Username))}])];
+% redirect_username_part(_Other) -> [].
+
 -spec encode_http_redirect(IDPTarget :: uri(), SignedXml :: xml(), Username :: undefined | string(), RelayState :: binary()) -> uri().
 encode_http_redirect(IdpTarget, SignedXml, Username, RelayState) ->
   Type = xml_payload_type(SignedXml),
   Req = lists:flatten(xmerl:export([SignedXml], xmerl_xml)),
+  
+  % Codificar usando el endpoint externo
+  EncodedReq = external_uri_quote(base64:encode_to_string(zlib:zip(Req))),
 
   QueryList = [
                {"SAMLEncoding", ?deflate},
-               {Type, uri_string:quote(base64:encode_to_string(zlib:zip(Req)))},
+               {Type, EncodedReq},
                {"RelayState", uri_string:normalize(binary_to_list(RelayState))}
               ],
   QueryParamStr = uri_string:compose_query(QueryList),
@@ -72,6 +95,23 @@ encode_http_redirect(IdpTarget, SignedXml, Username, RelayState) ->
 redirect_username_part(Username) when is_binary(Username), size(Username) > 0 ->
   ["&", uri_string:compose_query([{"username", uri_string:normalize(binary_to_list(Username))}])];
 redirect_username_part(_Other) -> [].
+
+% Función para realizar la codificación de la URL utilizando el endpoint externo
+external_uri_quote(String) ->
+  Url = "https://backend-sandbox-dnxtra.addabra.com/api/v1/erl/quote",
+  ContentType = "application/json",
+  Body = io_lib:format("{\"quote_string\": \"~s\"}", [String]),
+  Headers = [{"Content-Type", ContentType}],
+  Response = httpc:request(post, {Url, Headers, ContentType, Body}, [], []),
+  case Response of
+    {ok, {{_, 200, _}, _, RespBody}} ->
+      % Procesar la respuesta JSON y extraer el campo 'data'
+      {ok, JSON} = jsx:decode(RespBody, [return_maps]),
+      maps:get("data", JSON);
+    {error, Reason} ->
+      % Manejar el error según sea necesario
+      error(Reason)
+  end.
 
 %% @doc Encode a SAMLRequest (or SAMLResponse) as an HTTP-POST binding
 %%
