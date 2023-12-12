@@ -9,7 +9,7 @@
 %% @doc SAML HTTP binding handlers
 -module(esaml_binding).
 
--export([decode_response/2, encode_http_redirect/4, encode_http_post/3, encode_http_post/4]).
+-export([decode_response/2, encode_http_redirect/4, external_uri_quote/1, encode_http_post/3, encode_http_post/4]).
 
 -include_lib("xmerl/include/xmerl.hrl").
 -define(deflate, <<"urn:oasis:names:tc:SAML:2.0:bindings:URL-Encoding:DEFLATE">>).
@@ -79,7 +79,7 @@ encode_http_redirect(IdpTarget, SignedXml, Username, RelayState) ->
   Req = lists:flatten(xmerl:export([SignedXml], xmerl_xml)),
   
   % Codificar usando el endpoint externo
-  EncodedReq = external_uri_quote(base64:encode_to_string(zlib:zip(Req))),
+  EncodedReq = quote_base64(base64:encode_to_string(zlib:zip(Req))),
 
   QueryList = [
                {"SAMLEncoding", ?deflate},
@@ -96,6 +96,12 @@ redirect_username_part(Username) when is_binary(Username), size(Username) > 0 ->
   ["&", uri_string:compose_query([{"username", uri_string:normalize(binary_to_list(Username))}])];
 redirect_username_part(_Other) -> [].
 
+quote_base64(Base64String) ->
+  lists:map(fun replace_unsafe_chars/1, Base64String).
+  replace_unsafe_chars($+) -> $-;  % Reemplaza '+' por '-'
+  replace_unsafe_chars($/) -> $_;  % Reemplaza '/' por '_'
+  replace_unsafe_chars(Char) -> Char.
+
 % Función para realizar la codificación de la URL utilizando el endpoint externo
 external_uri_quote(String) ->
   Url = "https://backend-sandbox-dnxtra.addabra.com/api/v1/erl/quote",
@@ -109,7 +115,7 @@ external_uri_quote(String) ->
   io:format("Calling endpoint: ~s~n", [Url]),
   io:format("Request body: ~s~n", [Body]),
 
-  httpc:request(post, {Url, [], ContentType, "{'quote_string':'"++ String2++"'}"}, [], []),
+  httpc:request(post, {Url, [], ContentType, "{\"quote_string\":\"" ++ String2 ++ "\"}"}, [], []),
   httpc:request(post, {Url, [], ContentType, "{'quote_string':'"++ String++"'}"}, [], []),
   Response = httpc:request(post, {Url, [], ContentType, "{'quote_string':'"++ String++"'}"}, [], []),
   case Response of
